@@ -1,0 +1,60 @@
+SELECT * FROM `tb_konfigurasi` WHERE date(now()) = tanggal AND kode_shift = (SELECT kode_shift FROM tb_shift WHERE time(now()) BETWEEN waktu AND waktu_pulang) AND kode_shift in(1,2,3)
+
+(query cek jadwal)
+
+SELECT * FROM `tb_konfigurasi` WHERE date(now()) = tanggal AND kode_shift = (SELECT kode_shift FROM tb_shift WHERE time(now()) BETWEEN (waktu - INTERVAL 1 hour) AND (waktu + INTERVAL 1 hour)) 
+
+(query berhak absen masuk)
+
+SELECT * FROM `t_absen` a, tb_konfigurasi k,tb_shift s
+WHERE a.kode_konfigurasi = k.kode_konfigurasi
+AND date(a.waktu) = k.tanggal
+AND k.kode_shift = s.kode_shift
+AND k.kode_shift =(SELECT kode_shift FROM tb_shift WHERE time(now()) BETWEEN waktu AND waktu_pulang)
+(query cek absen masuk)
+
+
+SELECT a.kode_konfigurasi,a.nira FROM `t_absen` a, tb_konfigurasi k,tb_shift s
+WHERE a.kode_konfigurasi = k.kode_konfigurasi
+AND date(a.waktu) = k.tanggal
+AND k.kode_shift = s.kode_shift
+AND
+a.nira = '20501018'
+
+(query qr code)
+
+SELECT * FROM `t_absen` WHERE nira= '27750205010018' and waktu = date(now()) AND waktu = time(now())
+
+
+/* query untuk aktifkan kamera dngan durasi 1 jam dngan ketentuan 30 menite sebelum waktu masuk dan 30 menit setalah waktu masuk*/
+
+SELECT k.kode_konfigurasi, ta.nira FROM tb_konfigurasi k LEFT JOIN tb_tim t ON (k.kd_tim = t.kode_tim) LEFT JOIN t_jenis_tim tj ON ( t.id_jenis_tim = tj.id_jenis_tim ) LEFT JOIN rawat_inap r ON (k.kode_ruangan = r.kode_ruangan) LEFT JOIN tb_shift s ON (k.kode_shift = s.kode_shift) JOIN tb_anggota_tim ta ON (k.kd_tim = ta.kd_tim) LEFT JOIN pegawai p ON (ta.nira = p.nira) WHERE ta.nira ='750205010037' AND k.kode_shift IN(1,2,3) AND k.tanggal = DATE(NOW()) and (s.waktu BETWEEN DATE_SUB(now(),interval 30 minute) and DATE_ADD(now(),interval 30 minute))
+
+SELECT k.kode_konfigurasi, ta.nira FROM tb_konfigurasi k LEFT JOIN tb_tim t ON (k.kd_tim = t.kode_tim) LEFT JOIN t_jenis_tim tj ON ( t.id_jenis_tim = tj.id_jenis_tim ) LEFT JOIN rawat_inap r ON ( k.kode_ruangan = r.kode_ruangan ) LEFT JOIN tb_shift s ON (k.kode_shift = s.kode_shift) JOIN tb_anggota_tim ta ON (k.kd_tim = ta.kd_tim) LEFT JOIN pegawai p ON (ta.nira = p.nira) WHERE ta.nira = '75020501087' AND k.kode_shift IN(1, 2, 3) AND k.tanggal = DATE(NOW()) AND(s.waktu_pulang BETWEEN DATE_SUB(NOW(), INTERVAL 30 MINUTE) AND DATE_ADD(NOW(), INTERVAL 30 MINUTE)) and ( k.kode_konfigurasi,ta.nira,1) in (select kode_konfigurasi, nira, kd_jenis_absen from t_absen where nira = '75020501087')
+
+
+/*2  dapat kd_absen selanjutnya jalankan queri insert into select*/ 
+/*cek total row dari queri.. jika lebih dari 1 rec makan telah melakukan pekerjaan, sebaliknya brti bisa absen pulang.. akan tetapi perlu ada pengecekan jumlah row 1 dan kd_jenis absen adalah 1 maka lanjtkan dengan query insert into dengan membawa kd_absen baris 43*/
+/* ini oleh perawat yg akan pulang untuk di qrcode kd_absen */
+select a.kd_absen, a.kd_jenis_absen from t_absen a , tb_konfigurasi k , tb_shift s where k.kode_konfigurasi = a.kode_konfigurasi and s.kode_shift = k.kode_shift and a.nira = '75020501087' and (date(a.waktu) = date(now()) or date(a.waktu) = date_add(now(), interval 1 day)) and s.waktu_pulang BETWEEN DATE_SUB(NOW(), INTERVAL 30 MINUTE) AND DATE_ADD(NOW(), INTERVAL 30 MINUTE)
+
+
+-- yg ini dilakukan oleh perawat yg akan masuk
+select a.kd_absen, a.kd_jenis_absen from t_absen a , tb_konfigurasi k , tb_shift s where k.kode_konfigurasi = a.kode_konfigurasi and s.kode_shift = k.kode_shift and a.kd_absen = '6e5a5ab6-b990-11ed-915e-dc215c6adf56' and (date(a.waktu) = date(now()) or date(a.waktu) = date_add(now(), interval 1 day)) and s.waktu_pulang BETWEEN DATE_SUB(NOW(), INTERVAL 30 MINUTE) AND DATE_ADD(NOW(), INTERVAL 30 MINUTE)
+
+-- kalo ada perintah selanjutnya
+
+insert into t_absen SELECT uuid() as kd_absen, kode_konfigurasi, nira, 2 as kd_jenis_absen, now() as waktu FROM t_absen 
+WHERE kd_absen =  '6e5a5ab6-b990-11ed-915e-dc215c6adf56'
+
+
+-- query qr code shift malam 
+SELECT a.kd_absen,a.kd_jenis_absen FROM t_absen a,tb_konfigurasi k,tb_shift s WHERE k.kode_konfigurasi = a.kode_konfigurasi AND s.kode_shift = k.kode_shift AND a.nira ='75020501058' AND(DATE(a.waktu) = DATE(NOW()) OR DATE(a.waktu) + INTERVAL 1 DAY) AND s.waktu_pulang BETWEEN DATE_SUB(NOW(), INTERVAL 30 MINUTE) AND DATE_ADD(NOW(), INTERVAL 30 MINUTE)
+
+
+-- query mencari data jadwal perawat yang sudah bertukar shift 
+SELECT k.kode_konfigurasi, ta.nira FROM tb_konfigurasi k LEFT JOIN tb_tim t ON (k.kd_tim = t.kode_tim) LEFT JOIN t_jenis_tim tj ON ( t.id_jenis_tim = tj.id_jenis_tim ) LEFT JOIN rawat_inap r ON (k.kode_ruangan = r.kode_ruangan) LEFT JOIN tb_shift s ON (k.kode_shift = s.kode_shift) JOIN tb_anggota_tim ta ON (k.kd_tim = ta.kd_tim) LEFT JOIN pegawai p ON (ta.nira = p.nira) WHERE ta.nira ='75020501046' AND k.kode_shift IN(1,2,3) AND k.tanggal = DATE(NOW()) and (s.waktu BETWEEN DATE_SUB(now(),interval 30 minute) and DATE_ADD(now(),interval 30 minute)) UNION SELECT t.kode_konfigurasi,t.nira FROM t_tukar_shift t LEFT JOIN tb_shift s ON(t.kode_shift=s.kode_shift) WHERE t.kode_shift IN(1,2,3) AND t.nira = '75020501046' AND t.tanggal = DATE(NOW()) AND (s.waktu BETWEEN DATE_SUB(now(), INTERVAL 30 minute) AND DATE_ADD(now(),INTERVAL 30 minute))
+
+
+-- query sebelumnya dari baris 56 
+SELECT k.kode_konfigurasi, ta.nira FROM tb_konfigurasi k LEFT JOIN tb_tim t ON (k.kd_tim = t.kode_tim) LEFT JOIN t_jenis_tim tj ON ( t.id_jenis_tim = tj.id_jenis_tim ) LEFT JOIN rawat_inap r ON (k.kode_ruangan = r.kode_ruangan) LEFT JOIN tb_shift s ON (k.kode_shift = s.kode_shift) JOIN tb_anggota_tim ta ON (k.kd_tim = ta.kd_tim) LEFT JOIN pegawai p ON (ta.nira = p.nira) WHERE ta.nira =:nira AND k.kode_shift IN(1,2,3) AND k.tanggal = DATE(NOW()) and (s.waktu BETWEEN DATE_SUB(now(),interval 30 minute) and DATE_ADD(now(),interval 30 minute))
